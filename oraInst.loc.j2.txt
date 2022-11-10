@@ -1,0 +1,2 @@
+inventory_loc={{ OEM_ORAENV }}
+inst_group={{ OEM_INSTGRP }}
