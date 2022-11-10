@@ -1,0 +1,67 @@
+---
+# File: install_oracle.yml
+- name: Install Oracle
+  hosts: oracle
+
+  vars:
+    oui_rspfile: "files/dbca.rsp"
+    dbca_rspfile: "files/db_install.rsp"
+    tarfile: "files/installer.tar"
+    ora_srcdir: "/tmp/installer.tar"
+    ora_destdir: "/app/install"
+
+  tasks:
+
+  - name: Make the install dir
+    file:
+      path: "{{ora_destdir}}"
+      state: directory
+
+
+  - name: Copy installer to Server (Tarball)
+    beome: yes
+    copy:
+      src: "files/{{item}}"
+      dest: "{{ora_destdir}}"
+      mode: 0644
+      owner: oracle
+      group: oinstall
+    with_items:
+      - "{{tarfile}}"
+      - "{{oui_rspfile}}"
+      - "{{dbca_rspfile}}"_
+
+  - name: Unpack the installer (untar)
+    become: yes
+    unarchive:
+      copy: "yes"
+      src: "{{ora_destdir}}/{{tarfile}}"
+      dest: "{{ora_destdir}}"
+      group: oinstall
+      owner: oracle
+
+
+  - name: Install Oracle Binaries (run installer with rsp file)
+    become: yes
+    remote_user: oracle
+    command: "{{ora_destdir}}/runInstaller -silent -noconfig {{ora_destdir}}/{{oui_rspfile}}"
+
+  - name: Create Database (run installer with rsp file - home )
+    become: yes
+    remote_user: oracle
+    command: "{{ora_destdir}}/runInstaller -silent -noconfig {{ora_destdir}}/{{dbca_rspfile}}"
+
+  - name: Clean up install dir
+    file:
+      path: "{{ora_destdir}}"
+      state: absent
+
+  - name: Create orInst.loc file
+    become: yes
+    template:
+      src: oraInst.loc.j2
+      dest: //etc/oraInst.loc
+      mode: 0644
+      owner: root
+      group: root
+      backup: yes
